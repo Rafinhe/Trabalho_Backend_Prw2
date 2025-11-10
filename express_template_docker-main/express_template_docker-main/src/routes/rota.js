@@ -1,0 +1,952 @@
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Retorna uma mensagem de boas-vindas.
+ *     description: Endpoint raiz da aplicação.
+ *     tags: [Root]
+ *     responses:
+ *       200:
+ *         description: Mensagem retornada com sucesso.
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *               example: Bem vindo à Clinica Pet Feliz!!!!!!
+ */
+router.get("/", (req, res) => {
+  res.send("Bem vindo à Clinica Pet Feliz!!!");
+});
+
+/**
+ * @swagger
+ * /usuarios:
+ *   get:
+ *     summary: Lista os usuários cadastrados no sistema.
+ *     description: Retorna uma lista de todos os usuários cadastrados no banco de dados.
+ *     tags: [Usuários]
+ *     responses:
+ *       200:
+ *         description: Lista de usuários retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     example: 1
+ *                   nome:
+ *                     type: string
+ *                     example: "José"
+ *                   data:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2025-10-04T12:58:40.208Z"
+ *       500:
+ *         description: Erro interno ao buscar usuários.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: "Erro ao buscar usuários"
+ */
+router.get("/usuarios", async (req, res) => {
+  try {
+    const result = await db.query("SELECT id, nome, data FROM usuarios");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+/**
+ * @swagger
+ * /transacao/{id}:
+ *   get:
+ *     summary: Executa uma transação de atualização de usuário.
+ *     description: Adiciona "_teste" ao nome e à senha do usuário especificado, retornando o registro atualizado.
+ *     tags: [Usuários]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do usuário a ser atualizado.
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     responses:
+ *       200:
+ *         description: Usuário atualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: "Usuário atualizado com sucesso!"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     nome:
+ *                       type: string
+ *                       example: "José_teste"
+ *                     senha:
+ *                       type: string
+ *                       example: "1234_teste"
+ *                     data:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-10-29T12:58:40.208Z"
+ *       500:
+ *         description: Erro ao executar a transação.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 msg:
+ *                   type: string
+ *                   example: "Erro de operação"
+ */
+router.get("/transacao/:id", async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+      await conexao.query("UPDATE usuarios SET nome = nome || '_teste' WHERE id = $1", [id]);
+      await conexao.query("UPDATE usuarios SET senha = senha || '_teste' WHERE id = $1", [id]);
+
+      const resultado = await conexao.query("SELECT * FROM usuarios WHERE id = $1", [id]);
+      return resultado.rows[0];
+    });
+
+    if (result) {
+      return res.json({ msg: "Usuário atualizado com sucesso!", data: result });
+    }
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+});
+
+
+
+//cadastros:
+
+/**
+ * @swagger
+ * /cadastrarVet:
+ *   post:
+ *     summary: Cadastra um novo veterinário.
+ *     description: Insere um novo veterinário no banco de dados.
+ *     tags: [Veterinários]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Dr. João" }
+ *               crmv: { type: string, example: "12345-SP" }
+ *               data_nascimento: { type: string, format: date, example: "1985-04-12" }
+ *               logradouro: { type: string, example: "Rua das Flores" }
+ *               numero: { type: string, example: "100" }
+ *               bairro: { type: string, example: "Centro" }
+ *               cep: { type: string, example: "12345-678" }
+ *               cidade: { type: string, example: "São Paulo" }
+ *               uf: { type: string, example: "SP" }
+ *               telefone: { type: string, example: "(11) 99999-9999" }
+ *               email: { type: string, example: "joao@clinica.com" }
+ *     responses:
+ *       200:
+ *         description: Veterinário cadastrado com sucesso.
+ *       500:
+ *         description: Erro interno ao cadastrar veterinário.
+ */
+
+router.post("/cadastrarVet", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, crmv, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email} = req.body;
+
+      const r = await conexao.query("INSERT INTO veterinario (nome, crmv, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email) values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *", [nome, crmv, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+
+/**
+ * @swagger
+ * /cadastrarTutor:
+ *   post:
+ *     summary: Cadastra um novo tutor.
+ *     description: Insere um novo tutor no banco de dados.
+ *     tags: [Tutores]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Maria" }
+ *               cpf: { type: string, example: "123.456.789-00" }
+ *               data_nascimento: { type: string, format: date, example: "1990-08-22" }
+ *               logradouro: { type: string, example: "Av. Paulista" }
+ *               numero: { type: string, example: "2000" }
+ *               bairro: { type: string, example: "Bela Vista" }
+ *               cep: { type: string, example: "01310-200" }
+ *               cidade: { type: string, example: "São Paulo" }
+ *               uf: { type: string, example: "SP" }
+ *               telefone: { type: string, example: "(11) 98888-8888" }
+ *               email: { type: string, example: "maria@email.com" }
+ *     responses:
+ *       200:
+ *         description: Tutor cadastrado com sucesso.
+ *       500:
+ *         description: Erro interno ao cadastrar tutor.
+ */
+
+router.post("/cadastrarTutor", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, cpf, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email} = req.body;
+
+      const r = await conexao.query("INSERT INTO tutor (nome, cpf, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email) values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *", [nome, cpf, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /cadastrarPet:
+ *   post:
+ *     summary: Cadastra um novo pet.
+ *     description: Adiciona um pet vinculado a um tutor existente.
+ *     tags: [Pets]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Rex" }
+ *               data_nascimento: { type: string, format: date, example: "2020-01-10" }
+ *               especie: { type: string, example: "Cachorro" }
+ *               raca: { type: string, example: "Labrador" }
+ *               id_tutor: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Pet cadastrado com sucesso.
+ *       500:
+ *         description: Erro interno ou tutor inexistente.
+ */
+
+router.post("/cadastrarPet", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, data_nascimento, especie, raca, id_tutor} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from tutor where id = $1", [id_tutor]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse tutor não existe... :('});
+      }
+
+      const r = await conexao.query("INSERT INTO pet (nome, data_nascimento, especie, raca, id_tutor) values($1, $2, $3, $4, $5) RETURNING *", [nome, data_nascimento, especie, raca, id_tutor]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /cadastrarConsulta:
+ *   post:
+ *     summary: Cadastra uma nova consulta veterinária.
+ *     description: Registra uma nova consulta entre um veterinário e um pet.
+ *     tags: [Consultas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_vet: { type: integer, example: 1 }
+ *               id_pet: { type: integer, example: 2 }
+ *               data_hora: { type: string, format: date-time, example: "2025-11-10T14:30:00Z" }
+ *               valor: { type: number, example: 150.00 }
+ *     responses:
+ *       200:
+ *         description: Consulta cadastrada com sucesso.
+ *       500:
+ *         description: Erro interno ou conflito de horário.
+ */
+
+router.post("/cadastrarConsulta", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {id_vet, id_pet, data_hora, valor} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from pet where id = $1", [id_pet]);  
+      const quantidade = Number(s.rows[0].count);
+
+      const j = await db.query("SELECT COUNT(*) from veterinario where id = $1", [id_vet]);  
+      const quant = Number(j.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse pet não existe... :('});
+      }
+
+      if(quant == 0){
+        return res.status(500).json({msg: 'Esse veterinário não existe... :('});
+      }
+
+      const k = await db.query("SELECT COUNT(*) from consulta where id = $1 and data_hora = $2", [id_vet, data_hora]);  
+      const cons = Number(s.rows[0].count);
+
+      if(cons != 0){
+        return res.status(500).json({msg: 'Já existe uma consulta marcada para esse dia/horário...:('});
+      }
+
+      const r = await conexao.query("INSERT INTO consulta (id_vet, id_pet, data_hora, valor) values($1, $2, $3, $4) RETURNING *", [id_vet, id_pet, data_hora, valor]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+//exibir:
+
+
+/**
+ * @swagger
+ * /exibirVeterinarios:
+ *   get:
+ *     summary: Lista todos os veterinários.
+ *     description: Retorna todos os veterinários cadastrados no sistema.
+ *     tags: [Veterinários]
+ *     responses:
+ *       200:
+ *         description: Lista de veterinários retornada com sucesso.
+ *       500:
+ *         description: Erro interno ao buscar veterinários.
+ */
+
+router.get("/exibirVeterinarios", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const r = await db.query("SELECT * from veterinario");
+
+      res.json(r.rows);
+        
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /exibirTutores:
+ *   get:
+ *     summary: Lista todos os tutores.
+ *     description: Retorna todos os tutores cadastrados.
+ *     tags: [Tutores]
+ *     responses:
+ *       200:
+ *         description: Lista de tutores retornada com sucesso.
+ *       500:
+ *         description: Erro interno ao buscar tutores.
+ */
+
+router.get("/exibirTutores", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const r = await db.query("SELECT * from tutor");
+
+      res.json(r.rows);
+        
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /exibirPets:
+ *   get:
+ *     summary: Lista todos os pets.
+ *     description: Retorna todos os pets cadastrados.
+ *     tags: [Pets]
+ *     responses:
+ *       200:
+ *         description: Lista de pets retornada com sucesso.
+ *       500:
+ *         description: Erro interno ao buscar pets.
+ */
+
+router.get("/exibirPets", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const r = await db.query("SELECT * from pet");
+
+      res.json(r.rows);
+        
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /exibirConsultas:
+ *   get:
+ *     summary: Lista todas as consultas.
+ *     description: Retorna todas as consultas registradas com detalhes do veterinário, tutor e pet.
+ *     tags: [Consultas]
+ *     responses:
+ *       200:
+ *         description: Lista de consultas retornada com sucesso.
+ *       500:
+ *         description: Erro interno ao buscar consultas.
+ */
+
+router.get("/exibirConsultas", async (req, res) => {
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const r = await db.query("SELECT c.id, v.crmv, v.nome as nome_vet, t.cpf, t.nome as nome_tutor, p.nome as nome_pet, c.data_hora, c.valor from consulta as c join veterinario as v on c.id_vet = v.id join pet as p on c.id_pet = p.id join tutor as t on p.id_tutor = t.id");
+      res.json(r.rows);
+      
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+//delete:
+
+/**
+ * @swagger
+ * /deletarVeterinario/{id}:
+ *   delete:
+ *     summary: Exclui um veterinário.
+ *     description: Remove um veterinário e suas consultas associadas.
+ *     tags: [Veterinários]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Veterinário deletado com sucesso.
+ *       500:
+ *         description: Veterinário não encontrado ou erro interno.
+ */
+
+router.delete("/deletarVeterinario/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const s = await db.query("SELECT COUNT(*) from veterinario where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse veterinario não existe... :('});
+      }
+
+      const c = await db.query("SELECT COUNT(*) from consulta where id = $1", [id]);  
+      const quant = Number(c.rows[0].count);
+
+      if(quant != 0){
+        await db.query("DELETE FROM consulta where id_vet = $1", [id]);
+      }
+
+      const r = await db.query("DELETE FROM veterinario where id = $1 RETURNING *", [id]);
+      
+      res.json(r.rows[0]);
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /deletarTutor/{id}:
+ *   delete:
+ *     summary: Exclui um tutor.
+ *     description: Remove o tutor e todos os pets e consultas associados a ele.
+ *     tags: [Tutores]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Tutor deletado com sucesso.
+ *       500:
+ *         description: Tutor não encontrado ou erro interno.
+ */
+
+router.delete("/deletarTutor/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const s = await db.query("SELECT COUNT(*) from tutor where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse tutor não existe... :('});
+      }
+
+      const c = await db.query("SELECT COUNT(*) from pet where id_tutor = $1", [id]);  
+      const quant = Number(c.rows[0].count);
+
+      if(quant != 0){
+        const id_pet = await db.query("SELECT id from pet where id_tutor = $1", [id]); 
+
+        for(let i = 0; i < id_pet.rows.length; i++){
+          const id_pet_un = id_pet.rows[i].id;
+
+          const v = await db.query("SELECT COUNT(*) from consulta where id_pet = $1", [id_pet_un]);  
+          const qt = Number(c.rows[0].count);
+
+          if(qt != 0){
+            await db.query("DELETE FROM consulta where id_pet = $1", [id_pet_un]);
+          }
+
+        }
+
+        await db.query("DELETE FROM pet where id_tutor = $1", [id]);
+
+      }
+
+      const r = await db.query("DELETE FROM tutor where id = $1 RETURNING *", [id]);
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /deletarPet/{id}:
+ *   delete:
+ *     summary: Exclui um pet.
+ *     description: Remove o pet e suas consultas associadas.
+ *     tags: [Pets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Pet deletado com sucesso.
+ *       500:
+ *         description: Pet não encontrado ou erro interno.
+ */
+
+router.delete("/deletarPet/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const s = await db.query("SELECT COUNT(*) from pet where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse pet não existe... :('});
+      }
+
+      const c = await db.query("SELECT COUNT(*) from consulta where id_pet = $1", [id]);  
+      const quant = Number(c.rows[0].count);
+
+      if(quant != 0){
+        await db.query("DELETE FROM consulta where id_pet = $1", [id]);
+      }
+
+      const r = await db.query("DELETE FROM pet where id = $1 RETURNING *", [id]);
+      
+      res.json(r.rows[0]);
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+
+/**
+ * @swagger
+ * /deletarConsulta/{id}:
+ *   delete:
+ *     summary: Exclui uma consulta.
+ *     description: Remove uma consulta específica.
+ *     tags: [Consultas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Consulta deletada com sucesso.
+ *       500:
+ *         description: Consulta não encontrada ou erro interno.
+ */
+
+router.delete("/deletarConsulta/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const s = await db.query("SELECT COUNT(*) from consulta where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Essa consulta não existe... :('});
+      }
+
+      const r = await db.query("DELETE FROM consulta where id = $1 RETURNING *", [id]);
+      
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+//atualizar:
+
+/**
+ * @swagger
+ * /atualizarVeterinario/{id}:
+ *   put:
+ *     summary: Atualiza um veterinário.
+ *     description: Atualiza os dados de um veterinário existente.
+ *     tags: [Veterinários]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Dr. João Silva" }
+ *               telefone: { type: string, example: "(11) 97777-7777" }
+ *     responses:
+ *       200:
+ *         description: Veterinário atualizado com sucesso.
+ *       500:
+ *         description: Veterinário não encontrado ou erro interno.
+ */
+
+router.put("/atualizarVeterinario/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, crmv, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from veterinario where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse veterinario não existe... :('});
+      }
+
+      const r = await conexao.query("UPDATE VETERINARIO SET nome = $1, crmv = $2, data_nascimento = $3, logradouro = $4, numero = $5, bairro = $6, cep = $7, cidade = $8, uf = $9, telefone = $10, email = $11 WHERE id = $12 RETURNING *", [nome, crmv, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email, id]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /atualizarTutor/{id}:
+ *   put:
+ *     summary: Atualiza um tutor.
+ *     description: Atualiza as informações de um tutor existente.
+ *     tags: [Tutores]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Tutor atualizado com sucesso.
+ *       500:
+ *         description: Tutor não encontrado ou erro interno.
+ */
+
+router.put("/atualizarTutor/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, cpf, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from tutor where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse tutor não existe... :('});
+      }
+
+      const r = await conexao.query("UPDATE TUTOR SET nome = $1, cpf = $2, data_nascimento = $3, logradouro = $4, numero = $5, bairro = $6, cep = $7, cidade = $8, uf = $9, telefone = $10, email = $11 WHERE id = $12 RETURNING *", [nome, cpf, data_nascimento, logradouro, numero, bairro, cep, cidade, uf, telefone, email, id]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+
+/**
+ * @swagger
+ * /atualizarPet/{id}:
+ *   put:
+ *     summary: Atualiza um pet.
+ *     description: Modifica os dados de um pet existente.
+ *     tags: [Pets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Pet atualizado com sucesso.
+ *       500:
+ *         description: Pet não encontrado ou erro interno.
+ */
+
+router.put("/atualizarPet/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {nome, data_nascimento, especie, raca} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from pet where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Esse pet não existe... :('});
+      }
+
+      const r = await conexao.query("UPDATE PET SET nome = $1, data_nascimento = $2, especie = $3, raca = $4 WHERE id = $5 RETURNING *", [nome, data_nascimento, especie, raca, id]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+/**
+ * @swagger
+ * /atualizarConsulta/{id}:
+ *   put:
+ *     summary: Atualiza uma consulta.
+ *     description: Modifica a data ou o valor de uma consulta existente.
+ *     tags: [Consultas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, example: 1 }
+ *     responses:
+ *       200:
+ *         description: Consulta atualizada com sucesso.
+ *       500:
+ *         description: Consulta não encontrada ou erro interno.
+ */
+
+router.put("/atualizarConsulta/:id", async (req, res) => {
+
+  let id = req.params.id;
+
+  try {
+    const result = await db.transaction(async (conexao) => {
+
+      const {data_hora, valor} = req.body;
+
+      const s = await db.query("SELECT COUNT(*) from consulta where id = $1", [id]);  
+      const quantidade = Number(s.rows[0].count);
+
+      if(quantidade == 0){
+        return res.status(500).json({msg: 'Essa consulta não existe... :('});
+      }
+
+      const j = await db.query("SELECT COUNT(*) from consulta where id != $1 and data_hora = $2", [id, data_hora]);  
+      const quant = Number(j.rows[0].count);
+
+      if(quant != 0){
+        return res.status(500).json({msg: 'Já existe uma consulta marcada para esse dia/horário...:('});
+      }
+
+      const r = await conexao.query("UPDATE CONSULTA SET data_hora = $1, valor = $2 WHERE id = $3 RETURNING *", [data_hora, valor, id]);
+
+      res.json(r.rows[0]);
+
+    });
+
+    return res.status(500).json({ msg: "Erro de operação" });
+  } catch (err) {
+    return res.status(500).json({ msg: err.message });
+  }
+
+});
+
+module.exports = router;
