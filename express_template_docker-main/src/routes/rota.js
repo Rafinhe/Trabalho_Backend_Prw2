@@ -26,7 +26,7 @@ router.get("/", (req, res) => {
  *               crmv: { type: string, example: "12345-SP" }
  *               data_nascimento: { type: string, format: date, example: "1985-04-12" }
  *               logradouro: { type: string, example: "Rua das Flores" }
- *               numero: { type: string, example: "100" }
+ *               numero: { type: integer, example: 100 }
  *               bairro: { type: string, example: "Centro" }
  *               cep: { type: string, example: "12345-678" }
  *               cidade: { type: string, example: "São Paulo" }
@@ -35,7 +35,7 @@ router.get("/", (req, res) => {
  *               email: { type: string, example: "joao@clinica.com" }
  *     responses:
  *       200:
- *         description: Veterinário cadastrado com sucesso.
+ *         description: Retorna o objeto veterinário cadastrado com sucesso.
  *       500:
  *         description: Erro interno ao cadastrar veterinário.
  */
@@ -80,7 +80,7 @@ router.post("/cadastrarVet", async (req, res) => {
  *               cpf: { type: string, example: "123.456.789-00" }
  *               data_nascimento: { type: string, format: date, example: "1990-08-22" }
  *               logradouro: { type: string, example: "Av. Paulista" }
- *               numero: { type: string, example: "2000" }
+ *               numero: { type: integer, example: 2000 }
  *               bairro: { type: string, example: "Bela Vista" }
  *               cep: { type: string, example: "01310-200" }
  *               cidade: { type: string, example: "São Paulo" }
@@ -89,7 +89,7 @@ router.post("/cadastrarVet", async (req, res) => {
  *               email: { type: string, example: "maria@email.com" }
  *     responses:
  *       200:
- *         description: Tutor cadastrado com sucesso.
+ *         description: Retorna o objeto tutor cadastrado com sucesso.
  *       500:
  *         description: Erro interno ao cadastrar tutor.
  */
@@ -136,7 +136,7 @@ router.post("/cadastrarTutor", async (req, res) => {
  *               id_tutor: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Pet cadastrado com sucesso.
+ *         description: Retorna o objeto pet cadastrado com sucesso.
  *       500:
  *         description: Erro interno ou tutor inexistente.
  */
@@ -189,9 +189,9 @@ router.post("/cadastrarPet", async (req, res) => {
  *               valor: { type: number, example: 150.00 }
  *     responses:
  *       200:
- *         description: Consulta cadastrada com sucesso.
+ *         description: Retorna o objeto consulta cadastrado com sucesso.
  *       500:
- *         description: Erro interno ou conflito de horário.
+ *         description: Erros interno, veterinário inexistente, pet inexistente  ou conflito de horário.
  */
 
 router.post("/cadastrarConsulta", async (req, res) => {
@@ -240,11 +240,11 @@ router.post("/cadastrarConsulta", async (req, res) => {
  * /exibirVeterinarios:
  *   get:
  *     summary: Lista todos os veterinários.
- *     description: Retorna todos os veterinários cadastrados no sistema.
+ *     description: Retorna todos os veterinários cadastrados no banco de dados.
  *     tags: [Veterinários]
  *     responses:
  *       200:
- *         description: Lista de veterinários retornada com sucesso.
+ *         description: Retorna uma lista de objetos veterinários inseridos com sucesso.
  *       500:
  *         description: Erro interno ao buscar veterinários.
  */
@@ -274,11 +274,11 @@ router.get("/exibirVeterinarios", async (req, res) => {
  * /exibirTutores:
  *   get:
  *     summary: Lista todos os tutores.
- *     description: Retorna todos os tutores cadastrados.
+ *     description: Retorna todos os tutores cadastrados no banco de dados.
  *     tags: [Tutores]
  *     responses:
  *       200:
- *         description: Lista de tutores retornada com sucesso.
+ *         description: Retorna uma lista de objetos tutores inseridos com sucesso.
  *       500:
  *         description: Erro interno ao buscar tutores.
  */
@@ -308,11 +308,11 @@ router.get("/exibirTutores", async (req, res) => {
  * /exibirPets:
  *   get:
  *     summary: Lista todos os pets.
- *     description: Retorna todos os pets cadastrados.
+ *     description: Retorna todos os pets cadastrados no banco de dados.
  *     tags: [Pets]
  *     responses:
  *       200:
- *         description: Lista de pets retornada com sucesso.
+ *         description: Retorna uma lista de objetos pets inseridos com sucesso.
  *       500:
  *         description: Erro interno ao buscar pets.
  */
@@ -342,11 +342,11 @@ router.get("/exibirPets", async (req, res) => {
  * /exibirConsultas:
  *   get:
  *     summary: Lista todas as consultas.
- *     description: Retorna todas as consultas registradas com detalhes do veterinário, tutor e pet.
+ *     description: Retorna todas as consultas registradas com detalhes do veterinário, tutor e pet no banco de dados.
  *     tags: [Consultas]
  *     responses:
  *       200:
- *         description: Lista de consultas retornada com sucesso.
+ *         description: Retorna uma lista de objetos consultas inseridas com sucesso.
  *       500:
  *         description: Erro interno ao buscar consultas.
  */
@@ -382,7 +382,7 @@ router.get("/exibirConsultas", async (req, res) => {
  *         schema: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Veterinário deletado com sucesso.
+ *         description: Retorna o objeto veterinário deletado com sucesso.
  *       500:
  *         description: Veterinário não encontrado ou erro interno.
  */
@@ -426,7 +426,7 @@ router.delete("/deletarVeterinario/:id", async (req, res) => {
  * /deletarTutor/{id}:
  *   delete:
  *     summary: Exclui um tutor.
- *     description: Remove o tutor e todos os pets e consultas associados a ele.
+ *     description: Remove o tutor, todos os pets e consultas associados a ele.
  *     tags: [Tutores]
  *     parameters:
  *       - in: path
@@ -435,7 +435,7 @@ router.delete("/deletarVeterinario/:id", async (req, res) => {
  *         schema: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Tutor deletado com sucesso.
+ *         description: Retorna o objeto tutor deletado com sucesso.
  *       500:
  *         description: Tutor não encontrado ou erro interno.
  */
@@ -503,7 +503,7 @@ router.delete("/deletarTutor/:id", async (req, res) => {
  *         schema: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Pet deletado com sucesso.
+ *         description: Retorna o objeto pet deletado com sucesso.
  *       500:
  *         description: Pet não encontrado ou erro interno.
  */
@@ -557,7 +557,7 @@ router.delete("/deletarPet/:id", async (req, res) => {
  *         schema: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Consulta deletada com sucesso.
+ *         description: Retorna o objeto consulta deletada com sucesso.
  *       500:
  *         description: Consulta não encontrada ou erro interno.
  */
@@ -609,14 +609,24 @@ router.delete("/deletarConsulta/:id", async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               nome: { type: string, example: "Dr. João Silva" }
- *               telefone: { type: string, example: "(11) 97777-7777" }
+ *               nome: { type: string, example: "Dr. João" }
+ *               crmv: { type: string, example: "12345-SP" }
+ *               data_nascimento: { type: string, format: date, example: "1985-04-12" }
+ *               logradouro: { type: string, example: "Rua das Flores" }
+ *               numero: { type: integer, example: 100 }
+ *               bairro: { type: string, example: "Centro" }
+ *               cep: { type: string, example: "12345-678" }
+ *               cidade: { type: string, example: "São Paulo" }
+ *               uf: { type: string, example: "SP" }
+ *               telefone: { type: string, example: "(11) 99999-9999" }
+ *               email: { type: string, example: "joao@clinica.com" }
  *     responses:
  *       200:
- *         description: Veterinário atualizado com sucesso.
+ *         description: Retorna o objeto veterinário atualizado com sucesso.
  *       500:
  *         description: Veterinário não encontrado ou erro interno.
  */
+
 
 router.put("/atualizarVeterinario/:id", async (req, res) => {
 
@@ -653,16 +663,34 @@ router.put("/atualizarVeterinario/:id", async (req, res) => {
  * /atualizarTutor/{id}:
  *   put:
  *     summary: Atualiza um tutor.
- *     description: Atualiza as informações de um tutor existente.
+ *     description: Atualiza os dados de um tutor existente.
  *     tags: [Tutores]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema: { type: integer, example: 1 }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Dr. João" }
+ *               cpf: { type: string, example: "123.456.789-00" }
+ *               data_nascimento: { type: string, format: date, example: "1985-04-12" }
+ *               logradouro: { type: string, example: "Rua das Flores" }
+ *               numero: { type: integer, example: 100 }
+ *               bairro: { type: string, example: "Centro" }
+ *               cep: { type: string, example: "12345-678" }
+ *               cidade: { type: string, example: "São Paulo" }
+ *               uf: { type: string, example: "SP" }
+ *               telefone: { type: string, example: "(11) 99999-9999" }
+ *               email: { type: string, example: "joao@clinica.com" }
  *     responses:
  *       200:
- *         description: Tutor atualizado com sucesso.
+ *         description: Retorna o objeto tutor atualizado com sucesso.
  *       500:
  *         description: Tutor não encontrado ou erro interno.
  */
@@ -702,19 +730,32 @@ router.put("/atualizarTutor/:id", async (req, res) => {
  * /atualizarPet/{id}:
  *   put:
  *     summary: Atualiza um pet.
- *     description: Modifica os dados de um pet existente.
+ *     description: Atualiza o pet de um tutor existente.
  *     tags: [Pets]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema: { type: integer, example: 1 }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome: { type: string, example: "Rex" }
+ *               data_nascimento: { type: string, format: date, example: "2020-01-10" }
+ *               especie: { type: string, example: "Cachorro" }
+ *               raca: { type: string, example: "Labrador" }
+ *               id_tutor: { type: integer, example: 1 }
  *     responses:
  *       200:
- *         description: Pet atualizado com sucesso.
+ *         description: Retorna o objeto pet atualizado com sucesso.
  *       500:
  *         description: Pet não encontrado ou erro interno.
  */
+
 
 router.put("/atualizarPet/:id", async (req, res) => {
 
@@ -750,19 +791,31 @@ router.put("/atualizarPet/:id", async (req, res) => {
  * /atualizarConsulta/{id}:
  *   put:
  *     summary: Atualiza uma consulta.
- *     description: Modifica a data ou o valor de uma consulta existente.
+ *     description: Atualiza os dados de uma consulta existente.
  *     tags: [Consultas]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema: { type: integer, example: 1 }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_vet: { type: integer, example: 1 }
+ *               id_pet: { type: integer, example: 2 }
+ *               data_hora: { type: string, format: date-time, example: "2025-11-10T14:30:00Z" }
+ *               valor: { type: number, example: 150.00 }
  *     responses:
  *       200:
- *         description: Consulta atualizada com sucesso.
+ *         description: Retorna o objeto consulta atualizado com sucesso.
  *       500:
  *         description: Consulta não encontrada ou erro interno.
  */
+
 
 router.put("/atualizarConsulta/:id", async (req, res) => {
 
